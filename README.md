@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Sunday Supermarket - Hệ thống Siêu thị Trực tuyến
 
 Hệ thống quản lý siêu thị trực tuyến được phát triển cho Công ty DT, hoạt động tại số 01 Lý Tự Trọng, phường Ninh Kiều, thành phố Cần Thơ.
@@ -218,3 +219,6 @@ Authorization: Bearer <token>
 
 ISC
 
+=======
+# SundaySupermarket
+>>>>>>> ca0eaec904f7df8c0c34644c2bec382b3af9f271
