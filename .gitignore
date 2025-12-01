@@ -1,0 +1,49 @@
+# ==============================
+# BACKEND & FRONTEND DEPENDENCIES
+# ==============================
+/backend/node_modules
+/Frontend/node_modules
+/backend/dist
+/Frontend/dist
+/backend/.cache
+/Frontend/.cache
+/backend/build
+/Frontend/build
+
+# ==============================
+# ENVIRONMENT FILES
+# ==============================
+/backend/.env
+/Frontend/.env
+.env
+.env.local
+.env.*.local
+
+# ==============================
+# LOGS & DEBUG FILES
+# ==============================
+logs
+*.log
+npm-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ==============================
+# OS & EDITOR FILES
+# ==============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ==============================
+# TESTS & COVERAGE
+# ==============================
+/coverage
+/.nyc_output
+
+# ==============================
+# UPLOADS (giữ thư mục trống)
+# ==============================
+/uploads/*
+!uploads/.gitkeep
