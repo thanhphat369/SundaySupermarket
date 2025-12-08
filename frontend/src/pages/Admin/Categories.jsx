@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 
@@ -33,15 +34,43 @@ const AdminCategories = () => {
     }
   };
 
-  // Group categories by parent
-  const groupedCategories = () => {
-    const parents = categories.filter(c => !c.parentCategoryId);
-    const children = categories.filter(c => c.parentCategoryId);
+  // Build category tree recursively
+  const buildCategoryTree = (categoriesList, parentId = null, level = 0) => {
+    if (!categoriesList || categoriesList.length === 0) return [];
+    return categoriesList
+      .filter(c => (parentId === null && !c.parentCategoryId) || (parentId !== null && c.parentCategoryId === parentId))
+      .map(category => ({
+        ...category,
+        level,
+        children: buildCategoryTree(categoriesList, category._id, level + 1)
+      }));
+  };
+
+  // Render category options recursively for dropdown
+  const renderCategoryOptions = (categoriesList, parentId = null, level = 0, excludeId = null) => {
+    if (!categoriesList || categoriesList.length === 0) return [];
     
-    return parents.map(parent => ({
-      ...parent,
-      children: children.filter(c => c.parentCategoryId === parent._id)
-    }));
+    const filtered = categoriesList.filter(c => 
+      c._id !== excludeId && // Exclude current category when editing
+      ((parentId === null && !c.parentCategoryId) || (parentId !== null && c.parentCategoryId === parentId))
+    );
+
+    const options = [];
+    filtered.forEach(category => {
+      const indent = '  '.repeat(level);
+      const prefix = level === 0 ? '📁' : '└─ 📂';
+      options.push(
+        <option key={category._id} value={category._id}>
+          {indent}{prefix} {category.name}
+        </option>
+      );
+      
+      // Recursively get children
+      const children = renderCategoryOptions(categoriesList, category._id, level + 1, excludeId);
+      options.push(...children);
+    });
+    
+    return options;
   };
 
   const handleSubmit = async (e) => {
@@ -51,14 +80,8 @@ const AdminCategories = () => {
     try {
       const categoryData = {
         name: formData.name,
+        parentCategoryId: formData.parentCategoryId || null, // Có thể là null hoặc bất kỳ category ID nào
       };
-      
-      // Nếu là danh mục con, mới thêm parentCategoryId
-      if (formData.categoryType === 'child' && formData.parentCategoryId) {
-        categoryData.parentCategoryId = formData.parentCategoryId;
-      } else {
-        categoryData.parentCategoryId = null; // Đảm bảo danh mục cha không có parent
-      }
 
       let response;
       if (editingCategory) {
@@ -138,7 +161,7 @@ const AdminCategories = () => {
     return <div className="p-6">Đang tải...</div>;
   }
 
-  const grouped = groupedCategories();
+  const grouped = buildCategoryTree(categories);
 
   return (
     <div className="p-6">
@@ -162,7 +185,7 @@ const AdminCategories = () => {
       {/* Categories List - Hierarchical View */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="divide-y divide-gray-200">
-          {grouped.length === 0 ? (
+          {!grouped || grouped.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <p>Chưa có danh mục nào. Hãy thêm danh mục mới!</p>
             </div>
@@ -183,7 +206,7 @@ const AdminCategories = () => {
                           {parent.productCount || 0} sản phẩm
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">ID: {parent._id}</p>
+                      <p className="text-sm text-gray-500 mt-1">ID: {String(parent._id).slice(-1)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -209,48 +232,104 @@ const AdminCategories = () => {
                   </div>
                 </div>
 
-                {/* Subcategories */}
+                {/* Render children recursively */}
                 {parent.children && parent.children.length > 0 && (
-                  <div className="mt-4 ml-20 space-y-3 pl-4 border-l-2 border-gray-200">
+                  <div className="mt-4 ml-20 space-y-3">
                     {parent.children.map((child) => (
-                      <div key={child._id} className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-lg px-3 -ml-4">
-                        <div className="flex items-center gap-3 flex-1">
-                          <span className="text-gray-400">└─</span>
-                          <div className="w-12 h-12 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
-                            <span className="text-xl">📂</span>
-                          </div>
-                          <div>
-                            <h4 className="text-base font-medium text-gray-700">{child.name}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="text-xs text-gray-500">ID: {child._id}</p>
-                              <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
-                                {child.productCount || 0} sản phẩm
-                              </span>
+                      <div key={child._id}>
+                        <div className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-lg px-3 -ml-4 pl-4 border-l-2 border-gray-200">
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="text-gray-400">└─</span>
+                            <div className="w-12 h-12 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
+                              <span className="text-xl">📂</span>
+                            </div>
+                            <div>
+                              <h4 className="text-base font-medium text-gray-700">{child.name}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <p className="text-xs text-gray-500">ID: {String(child._id).slice(-1)}</p>
+                                <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                                  {child.productCount || 0} sản phẩm
+                                </span>
+                                {child.level > 1 && (
+                                  <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                                    Cấp {child.level + 1}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleViewProducts(child)}
+                              disabled={!child.productCount || child.productCount === 0}
+                              className="px-2 py-1 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Xem sản phẩm"
+                            >
+                              👁️ ({child.productCount || 0})
+                            </button>
+                            <button
+                              onClick={() => handleEdit(child)}
+                              className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-xs font-medium"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleDelete(child._id)}
+                              className="px-2 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors text-xs font-medium"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleViewProducts(child)}
-                            disabled={!child.productCount || child.productCount === 0}
-                            className="px-2 py-1 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Xem sản phẩm"
-                          >
-                            👁️ ({child.productCount || 0})
-                          </button>
-                          <button
-                            onClick={() => handleEdit(child)}
-                            className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-xs font-medium"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDelete(child._id)}
-                            className="px-2 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors text-xs font-medium"
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                        {/* Recursively render nested children */}
+                        {child.children && child.children.length > 0 && (
+                          <div className="ml-16 mt-2 space-y-2 pl-4 border-l-2 border-gray-300">
+                            {child.children.map((grandchild) => (
+                              <div key={grandchild._id} className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-lg px-3 -ml-4">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <span className="text-gray-400">└─</span>
+                                  <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
+                                    <span className="text-lg">📂</span>
+                                  </div>
+                                  <div>
+                                    <h5 className="text-sm font-medium text-gray-700">{grandchild.name}</h5>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <p className="text-xs text-gray-500">ID: {String(grandchild._id).slice(-1)}</p>
+                                      <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                                        {grandchild.productCount || 0} sản phẩm
+                                      </span>
+                                      <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                                        Cấp {grandchild.level + 1}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleViewProducts(grandchild)}
+                                    disabled={!grandchild.productCount || grandchild.productCount === 0}
+                                    className="px-2 py-1 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Xem sản phẩm"
+                                  >
+                                    👁️ ({grandchild.productCount || 0})
+                                  </button>
+                                  <button
+                                    onClick={() => handleEdit(grandchild)}
+                                    className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-xs font-medium"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(grandchild._id)}
+                                    className="px-2 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors text-xs font-medium"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -288,53 +367,28 @@ const AdminCategories = () => {
             {/* Form Body */}
             <div className="flex-1 overflow-y-auto p-8">
               <form id="category-form" onSubmit={handleSubmit} className="space-y-6">
-                {/* Category Type Selection */}
+                {/* Parent Category Selection */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Loại danh mục <span className="text-red-500">*</span>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Danh mục cha (tùy chọn)
                   </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-purple-400 transition-all">
-                      <input
-                        type="radio"
-                        name="categoryType"
-                        value="parent"
-                        checked={formData.categoryType === 'parent'}
-                        onChange={(e) => {
-                          setFormData({ 
-                            ...formData, 
-                            categoryType: e.target.value,
-                            parentCategoryId: '' // Reset parent khi chọn danh mục cha
-                          });
-                        }}
-                        className="w-5 h-5 text-purple-600 focus:ring-purple-500"
-                      />
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">📁</span>
-                        <div>
-                          <div className="font-medium text-gray-800">Danh mục cha</div>
-                          <div className="text-xs text-gray-500">Không có danh mục cha</div>
-                        </div>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-purple-400 transition-all">
-                      <input
-                        type="radio"
-                        name="categoryType"
-                        value="child"
-                        checked={formData.categoryType === 'child'}
-                        onChange={(e) => setFormData({ ...formData, categoryType: e.target.value })}
-                        className="w-5 h-5 text-purple-600 focus:ring-purple-500"
-                      />
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">📂</span>
-                        <div>
-                          <div className="font-medium text-gray-800">Danh mục con</div>
-                          <div className="text-xs text-gray-500">Thuộc danh mục cha</div>
-                        </div>
-                      </div>
-                    </label>
-                  </div>
+                  <select
+                    value={formData.parentCategoryId}
+                    onChange={(e) => {
+                      setFormData({ 
+                        ...formData, 
+                        parentCategoryId: e.target.value,
+                        categoryType: e.target.value ? 'child' : 'parent'
+                      });
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
+                  >
+                    <option value="">-- Không có danh mục cha (Danh mục cấp 1) --</option>
+                    {categories && categories.length > 0 && renderCategoryOptions(categories, null, 0, editingCategory?._id)}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chọn danh mục cha để tạo danh mục con. Có thể chọn bất kỳ danh mục nào (kể cả danh mục con) để tạo nhiều cấp.
+                  </p>
                 </div>
 
                 {/* Category Name */}
@@ -352,32 +406,6 @@ const AdminCategories = () => {
                   />
                 </div>
 
-                {/* Parent Category - Only show if category type is 'child' */}
-                {formData.categoryType === 'child' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Chọn danh mục cha <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={formData.parentCategoryId}
-                      onChange={(e) => setFormData({ ...formData, parentCategoryId: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                    >
-                      <option value="">-- Chọn danh mục cha --</option>
-                      {categories
-                        .filter(c => !c.parentCategoryId && (!editingCategory || c._id !== editingCategory._id))
-                        .map((cat) => (
-                          <option key={cat._id} value={cat._id}>
-                            📁 {cat.name}
-                          </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Chọn danh mục cha cho danh mục con này.
-                    </p>
-                  </div>
-                )}
 
                 {/* Form Actions */}
                 <div className="pt-6 border-t border-gray-200 flex justify-end gap-4">

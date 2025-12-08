@@ -10,6 +10,7 @@ class InventoryTransaction {
         st.Product_ID,
         st.Type,
         st.Quantity,
+        st.UnitCost,
         st.Supplier_ID,
         st.CreatedAt,
         st.Note,
@@ -78,17 +79,26 @@ class InventoryTransaction {
       }
       
       // Create transaction record
-      const result = await transaction.request()
+      const request = transaction.request()
         .input('productId', sql.Int, transactionData.product)
         .input('type', sql.NVarChar, transactionData.type)
         .input('quantity', sql.Int, transactionData.quantity)
         .input('supplierId', sql.Int, transactionData.supplierId || null)
-        .input('note', sql.NVarChar, transactionData.reason || null)
-        .query(`
-          INSERT INTO Stock_Transactions (Product_ID, Type, Quantity, Supplier_ID, Note)
-          OUTPUT INSERTED.*
-          VALUES (@productId, @type, @quantity, @supplierId, @note)
-        `);
+        .input('note', sql.NVarChar, transactionData.reason || null);
+      
+      let insertQuery = `
+        INSERT INTO Stock_Transactions (Product_ID, Type, Quantity, Supplier_ID, Note`;
+      let valuesQuery = `VALUES (@productId, @type, @quantity, @supplierId, @note`;
+      
+      if (transactionData.unitCost !== undefined && transactionData.unitCost !== null && transactionData.unitCost !== '') {
+        insertQuery += `, UnitCost`;
+        valuesQuery += `, @unitCost`;
+        request.input('unitCost', sql.Int, parseInt(transactionData.unitCost));
+      }
+      
+      insertQuery += `) OUTPUT INSERTED.* ${valuesQuery})`;
+      
+      const result = await request.query(insertQuery);
       
       // Update inventory
       await transaction.request()
@@ -169,23 +179,34 @@ class InventoryTransaction {
       }
       
       // Update transaction record
-      const result = await transaction.request()
+      const updateRequest = transaction.request()
         .input('transactionId', sql.Int, transactionId)
         .input('productId', sql.Int, transactionData.product)
         .input('type', sql.NVarChar, transactionData.type)
         .input('quantity', sql.Int, transactionData.quantity)
         .input('supplierId', sql.Int, transactionData.supplierId || null)
-        .input('note', sql.NVarChar, transactionData.reason || null)
-        .query(`
-          UPDATE Stock_Transactions
-          SET Product_ID = @productId,
-              Type = @type,
-              Quantity = @quantity,
-              Supplier_ID = @supplierId,
-              Note = @note
-          OUTPUT INSERTED.*
-          WHERE Transaction_ID = @transactionId
-        `);
+        .input('note', sql.NVarChar, transactionData.reason || null);
+      
+      let updateQuery = `
+        UPDATE Stock_Transactions
+        SET Product_ID = @productId,
+            Type = @type,
+            Quantity = @quantity,
+            Supplier_ID = @supplierId,
+            Note = @note`;
+      
+      if (transactionData.unitCost !== undefined && transactionData.unitCost !== null && transactionData.unitCost !== '') {
+        updateQuery += `, UnitCost = @unitCost`;
+        updateRequest.input('unitCost', sql.Int, parseInt(transactionData.unitCost));
+      } else {
+        updateQuery += `, UnitCost = NULL`;
+      }
+      
+      updateQuery += `
+        OUTPUT INSERTED.*
+        WHERE Transaction_ID = @transactionId`;
+      
+      const result = await updateRequest.query(updateQuery);
       
       // Update inventory
       await transaction.request()

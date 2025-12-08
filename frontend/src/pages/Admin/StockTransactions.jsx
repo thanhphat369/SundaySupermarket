@@ -14,6 +14,7 @@ const AdminStockTransactions = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [transactionData, setTransactionData] = useState({
     quantity: '',
+    unitCost: '',
     reason: '',
     supplierId: '',
   });
@@ -97,12 +98,13 @@ const AdminStockTransactions = () => {
       setSelectedProduct(productData);
       setTransactionData({ 
         quantity: transaction.Quantity.toString(), 
+        unitCost: transaction.UnitCost ? transaction.UnitCost.toString() : '',
         reason: transaction.Note || '', 
         supplierId: transaction.Supplier_ID ? transaction.Supplier_ID.toString() : ''
       });
     } else {
       // Create mode
-      setTransactionData({ quantity: '', reason: '', supplierId: '' });
+      setTransactionData({ quantity: '', unitCost: '', reason: '', supplierId: '' });
     }
     setShowModal(true);
   };
@@ -135,6 +137,7 @@ const AdminStockTransactions = () => {
           product: selectedProduct._id,
           type: modalType,
           quantity: parseInt(transactionData.quantity),
+          unitCost: transactionData.unitCost ? parseInt(transactionData.unitCost) : null,
           reason: transactionData.reason || null,
           supplierId: transactionData.supplierId || null,
         });
@@ -145,6 +148,7 @@ const AdminStockTransactions = () => {
           product: selectedProduct._id,
           type: modalType,
           quantity: parseInt(transactionData.quantity),
+          unitCost: transactionData.unitCost ? parseInt(transactionData.unitCost) : null,
           reason: transactionData.reason || null,
           supplierId: transactionData.supplierId || null,
         });
@@ -254,6 +258,7 @@ const AdminStockTransactions = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sản phẩm</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loại</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số lượng</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Giá nhập</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nhà cung cấp</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ghi chú</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
@@ -262,7 +267,7 @@ const AdminStockTransactions = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
+                <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
                   Chưa có giao dịch nào
                 </td>
               </tr>
@@ -292,6 +297,9 @@ const AdminStockTransactions = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {transaction.Quantity}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                    {transaction.UnitCost ? `${transaction.UnitCost.toLocaleString('vi-VN')} đ` : '-'}
                   </td>
                   <td className="px-6 py-4 text-sm">{transaction.Supplier_Name || '-'}</td>
                   <td className="px-6 py-4 text-sm">{transaction.Note || '-'}</td>
@@ -384,6 +392,28 @@ const AdminStockTransactions = () => {
                     </p>
                   )}
                 </div>
+
+                {modalType === 'import' && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Giá nhập (đ) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={transactionData.unitCost}
+                      onChange={(e) => setTransactionData({ ...transactionData, unitCost: e.target.value })}
+                      className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nhập giá nhập"
+                    />
+                    {transactionData.quantity && transactionData.unitCost && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        Tổng tiền: {(parseInt(transactionData.quantity || 0) * parseInt(transactionData.unitCost || 0)).toLocaleString('vi-VN')} đ
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {suppliers.length > 0 && (
                   <div className="mb-4">

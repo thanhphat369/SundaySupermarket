@@ -37,7 +37,7 @@ exports.getInventoryTransactions = async (req, res) => {
 // Create inventory transaction
 exports.createInventoryTransaction = async (req, res) => {
   try {
-    const { product, type, quantity, reason, reference, supplierId } = req.body;
+    const { product, type, quantity, reason, reference, supplierId, unitCost } = req.body;
 
     const transaction = await InventoryTransaction.create({
       product,
@@ -46,6 +46,7 @@ exports.createInventoryTransaction = async (req, res) => {
       reason,
       reference,
       supplierId: supplierId || null,
+      unitCost: unitCost || null,
     });
 
     res.status(201).json({
@@ -64,7 +65,7 @@ exports.createInventoryTransaction = async (req, res) => {
 // Update inventory transaction
 exports.updateInventoryTransaction = async (req, res) => {
   try {
-    const { product, type, quantity, reason, supplierId } = req.body;
+    const { product, type, quantity, reason, supplierId, unitCost } = req.body;
     const { id } = req.params;
 
     const transaction = await InventoryTransaction.update(parseInt(id), {
@@ -73,6 +74,7 @@ exports.updateInventoryTransaction = async (req, res) => {
       quantity,
       reason,
       supplierId: supplierId || null,
+      unitCost: unitCost || null,
     });
 
     res.json({
