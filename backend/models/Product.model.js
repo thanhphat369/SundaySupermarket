@@ -1,6 +1,22 @@
 const { getPool, sql } = require('../config/database');
+const Category = require('./Category.model');
 
 class Product {
+  // Helper function to format images for storage (comma-separated, max 255 chars)
+  static formatImagesForStorage(images) {
+    if (!images || images.length === 0) return null;
+    
+    let result = '';
+    for (const img of images) {
+      const newResult = result ? `${result},${img}` : img;
+      if (newResult.length <= 255) {
+        result = newResult;
+      } else {
+        break; // Stop if adding this image would exceed 255 chars
+      }
+    }
+    return result || null;
+  }
   static async findAll(filters = {}) {
     const pool = getPool();
     let query = `
@@ -8,11 +24,18 @@ class Product {
         p.*,
         c.Category_Name,
         b.Brand_Name,
+        s.Supplier_Name,
         i.Stock,
-        i.MinStock
+        i.MinStock,
+        (SELECT TOP 1 pod.UnitCost 
+         FROM PurchaseOrder_Details pod
+         INNER JOIN PurchaseOrder po ON pod.PO_ID = po.PO_ID
+         WHERE pod.Product_ID = p.Product_ID
+         ORDER BY po.CreatedAt DESC) as CostPrice
       FROM Product p
       INNER JOIN Category c ON p.CategoryID = c.Category_ID
       INNER JOIN Brand b ON p.Brand_ID = b.Brand_ID
+      LEFT JOIN Supplier s ON b.Supplier_ID = s.Supplier_ID
       LEFT JOIN Inventory i ON p.Product_ID = i.Product_ID
       WHERE 1=1
     `;
@@ -20,8 +43,20 @@ class Product {
     const request = pool.request();
     
     if (filters.category) {
-      query += ' AND p.CategoryID = @category';
-      request.input('category', sql.Int, filters.category);
+      // Get all child category IDs (including the category itself)
+      const categoryIds = await Category.getAllChildCategoryIds(filters.category);
+      
+      if (categoryIds.length > 0) {
+        // Use IN clause to include products from parent and all child categories
+        const placeholders = categoryIds.map((_, index) => `@category${index}`).join(', ');
+        query += ` AND p.CategoryID IN (${placeholders})`;
+        categoryIds.forEach((id, index) => {
+          request.input(`category${index}`, sql.Int, id);
+        });
+      } else {
+        // If no categories found, return no results
+        query += ' AND 1=0';
+      }
     }
     
     if (filters.brand) {
@@ -65,11 +100,18 @@ class Product {
           p.*,
           c.Category_Name,
           b.Brand_Name,
+          s.Supplier_Name,
           i.Stock,
-          i.MinStock
+          i.MinStock,
+          (SELECT TOP 1 pod.UnitCost 
+           FROM PurchaseOrder_Details pod
+           INNER JOIN PurchaseOrder po ON pod.PO_ID = po.PO_ID
+           WHERE pod.Product_ID = p.Product_ID
+           ORDER BY po.CreatedAt DESC) as CostPrice
         FROM Product p
         INNER JOIN Category c ON p.CategoryID = c.Category_ID
         INNER JOIN Brand b ON p.Brand_ID = b.Brand_ID
+        LEFT JOIN Supplier s ON b.Supplier_ID = s.Supplier_ID
         LEFT JOIN Inventory i ON p.Product_ID = i.Product_ID
         WHERE p.Product_ID = @productId
       `);
@@ -90,7 +132,7 @@ class Product {
         .input('categoryId', sql.Int, productData.category)
         .input('brandId', sql.Int, productData.brand)
         .input('unitPrice', sql.Int, productData.price)
-        .input('imageURL', sql.NVarChar, productData.images?.[0] || null)
+        .input('imageURL', sql.NVarChar(255), Product.formatImagesForStorage(productData.images))
         .query(`
           INSERT INTO Product (Name, Description, CategoryID, Brand_ID, UnitPrice, ImageURL)
           OUTPUT INSERTED.*
@@ -143,9 +185,9 @@ class Product {
       updates.push('UnitPrice = @unitPrice');
       request.input('unitPrice', sql.Int, productData.price);
     }
-    if (productData.images?.[0]) {
+    if (productData.images !== undefined) {
       updates.push('ImageURL = @imageURL');
-      request.input('imageURL', sql.NVarChar, productData.images[0]);
+      request.input('imageURL', sql.NVarChar(255), Product.formatImagesForStorage(productData.images));
     }
 
     if (updates.length > 0) {
@@ -173,6 +215,47 @@ class Product {
 
   static async delete(productId) {
     const pool = getPool();
+    
+    // Check if product is used in Order_Details
+    const orderDetailsCheck = await pool.request()
+      .input('productId', sql.Int, productId)
+      .query('SELECT COUNT(*) as count FROM Order_Details WHERE Product_ID = @productId');
+    
+    if (orderDetailsCheck.recordset[0].count > 0) {
+      throw new Error('Không thể xóa sản phẩm đã được sử dụng trong đơn hàng');
+    }
+    
+    // Check if product is used in PurchaseOrder_Details
+    const purchaseOrderCheck = await pool.request()
+      .input('productId', sql.Int, productId)
+      .query('SELECT COUNT(*) as count FROM PurchaseOrder_Details WHERE Product_ID = @productId');
+    
+    if (purchaseOrderCheck.recordset[0].count > 0) {
+      throw new Error('Không thể xóa sản phẩm đã được sử dụng trong đơn mua hàng');
+    }
+    
+    // Check if product is in ShoppingCart
+    const shoppingCartCheck = await pool.request()
+      .input('productId', sql.Int, productId)
+      .query('SELECT COUNT(*) as count FROM ShoppingCart WHERE Product_ID = @productId');
+    
+    if (shoppingCartCheck.recordset[0].count > 0) {
+      // Delete from shopping cart first
+      await pool.request()
+        .input('productId', sql.Int, productId)
+        .query('DELETE FROM ShoppingCart WHERE Product_ID = @productId');
+    }
+    
+    // Delete Stock_Transactions (transaction history can be deleted)
+    await pool.request()
+      .input('productId', sql.Int, productId)
+      .query('DELETE FROM Stock_Transactions WHERE Product_ID = @productId');
+    
+    // Delete Feedback (reviews can be deleted)
+    await pool.request()
+      .input('productId', sql.Int, productId)
+      .query('DELETE FROM Feedback WHERE Product_ID = @productId');
+    
     // Delete inventory first
     await pool.request()
       .input('productId', sql.Int, productId)
@@ -192,8 +275,20 @@ class Product {
     const request = pool.request();
     
     if (filters.category) {
-      query += ' AND p.CategoryID = @category';
-      request.input('category', sql.Int, filters.category);
+      // Get all child category IDs (including the category itself)
+      const categoryIds = await Category.getAllChildCategoryIds(filters.category);
+      
+      if (categoryIds.length > 0) {
+        // Use IN clause to include products from parent and all child categories
+        const placeholders = categoryIds.map((_, index) => `@category${index}`).join(', ');
+        query += ` AND p.CategoryID IN (${placeholders})`;
+        categoryIds.forEach((id, index) => {
+          request.input(`category${index}`, sql.Int, id);
+        });
+      } else {
+        // If no categories found, return 0
+        query += ' AND 1=0';
+      }
     }
     if (filters.brand) {
       query += ' AND p.Brand_ID = @brand';

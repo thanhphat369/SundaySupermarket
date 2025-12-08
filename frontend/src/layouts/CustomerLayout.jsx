@@ -1,8 +1,14 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 const CustomerLayout = () => {
   const { logout, user } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -19,7 +25,7 @@ const CustomerLayout = () => {
             <NavLink to="/customer/profile" className="hover:text-primary-600">Hồ sơ</NavLink>
             <span className="text-gray-600">Xin chào, {user?.fullName}</span>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
             >
               Đăng xuất

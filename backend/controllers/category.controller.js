@@ -11,6 +11,10 @@ exports.getCategories = async (req, res) => {
         categories: categories.map(c => ({
           _id: c.Category_ID,
           name: c.Category_Name,
+          parentCategoryId: c.ParentCategoryID || null,
+          parentName: c.Parent_Name || null,
+          image: c.ImageURL || null,
+          productCount: c.ProductCount || 0,
         })),
       },
     });
@@ -40,6 +44,9 @@ exports.getCategoryById = async (req, res) => {
         category: {
           _id: category.Category_ID,
           name: category.Category_Name,
+          parentCategoryId: category.ParentCategoryID || null,
+          parentName: category.Parent_Name || null,
+          image: category.ImageURL || null,
         },
       },
     });
@@ -55,13 +62,25 @@ exports.getCategoryById = async (req, res) => {
 exports.createCategory = async (req, res) => {
   try {
     const categoryData = req.body;
+    
+    // Handle uploaded image
+    if (req.file) {
+      categoryData.image = `/uploads/categories/${req.file.filename}`;
+    }
 
     const category = await Category.create(categoryData);
 
     res.status(201).json({
       success: true,
       message: 'Category created successfully',
-      data: { category },
+      data: { 
+        category: {
+          _id: category.Category_ID,
+          name: category.Category_Name,
+          parentCategoryId: category.ParentCategoryID || null,
+          image: category.ImageURL || null,
+        }
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -75,6 +94,11 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const categoryData = req.body;
+    
+    // Handle uploaded image
+    if (req.file) {
+      categoryData.image = `/uploads/categories/${req.file.filename}`;
+    }
 
     const category = await Category.update(req.params.id, categoryData);
 
@@ -88,7 +112,14 @@ exports.updateCategory = async (req, res) => {
     res.json({
       success: true,
       message: 'Category updated successfully',
-      data: { category },
+      data: { 
+        category: {
+          _id: category.Category_ID,
+          name: category.Category_Name,
+          parentCategoryId: category.ParentCategoryID || null,
+          image: category.ImageURL || null,
+        }
+      },
     });
   } catch (error) {
     res.status(500).json({

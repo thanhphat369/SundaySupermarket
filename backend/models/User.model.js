@@ -105,6 +105,19 @@ class User {
     const updates = [];
     const request = pool.request().input('userId', sql.Int, userId);
 
+    if (userData.username) {
+      updates.push('User_Name = @userName');
+      request.input('userName', sql.NVarChar, userData.username);
+    }
+    if (userData.email) {
+      updates.push('Email = @email');
+      request.input('email', sql.NVarChar, userData.email);
+    }
+    if (userData.password) {
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      updates.push('Password = @password');
+      request.input('password', sql.NVarChar, hashedPassword);
+    }
     if (userData.fullName) {
       updates.push('Full_Name = @fullName');
       request.input('fullName', sql.NVarChar, userData.fullName);
@@ -115,7 +128,7 @@ class User {
     }
     if (userData.address !== undefined) {
       updates.push('Address = @address');
-      request.input('address', sql.NVarChar, userData.address);
+      request.input('address', sql.NVarChar, typeof userData.address === 'string' ? userData.address : JSON.stringify(userData.address));
     }
     if (userData.avatar !== undefined) {
       updates.push('Avatar = @avatar');
@@ -125,19 +138,30 @@ class User {
       updates.push('IsActive = @isActive');
       request.input('isActive', sql.Bit, userData.isActive);
     }
+    if (userData.role) {
+      // Get Role_ID by role name
+      const roleResult = await pool.request()
+        .input('roleName', sql.NVarChar, userData.role)
+        .query('SELECT Role_ID FROM Role WHERE Role_Name = @roleName');
+      
+      if (roleResult.recordset.length > 0) {
+        updates.push('Role_ID = @roleId');
+        request.input('roleId', sql.Int, roleResult.recordset[0].Role_ID);
+      }
+    }
 
     if (updates.length === 0) {
       return await this.findById(userId);
     }
 
-    const result = await request.query(`
+    await request.query(`
       UPDATE [User]
       SET ${updates.join(', ')}
-      OUTPUT INSERTED.*
       WHERE User_ID = @userId
     `);
 
-    return result.recordset[0] || null;
+    // Return updated user with role
+    return await this.findById(userId);
   }
 
   // Delete user (soft delete)

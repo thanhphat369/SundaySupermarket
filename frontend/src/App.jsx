@@ -28,7 +28,10 @@ import AdminCategories from './pages/Admin/Categories';
 import AdminBrands from './pages/Admin/Brands';
 import AdminOrders from './pages/Admin/Orders';
 import AdminInventory from './pages/Admin/Inventory';
+import AdminStockTransactions from './pages/Admin/StockTransactions';
+import AdminSuppliers from './pages/Admin/Suppliers';
 import AdminUsers from './pages/Admin/Users';
+import AdminPurchaseOrders from './pages/Admin/PurchaseOrders';
 
 // Shipper Pages
 import ShipperDashboard from './pages/Shipper/Dashboard';
@@ -93,6 +96,9 @@ function App() {
         <Route path="brands" element={<AdminBrands />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="inventory" element={<AdminInventory />} />
+        <Route path="stock-transactions" element={<AdminStockTransactions />} />
+        <Route path="suppliers" element={<AdminSuppliers />} />
+        <Route path="purchase-orders" element={<AdminPurchaseOrders />} />
         <Route path="users" element={<AdminUsers />} />
       </Route>
 

@@ -37,7 +37,7 @@ exports.getInventoryTransactions = async (req, res) => {
 // Create inventory transaction
 exports.createInventoryTransaction = async (req, res) => {
   try {
-    const { product, type, quantity, reason, reference } = req.body;
+    const { product, type, quantity, reason, reference, supplierId } = req.body;
 
     const transaction = await InventoryTransaction.create({
       product,
@@ -45,11 +45,39 @@ exports.createInventoryTransaction = async (req, res) => {
       quantity,
       reason,
       reference,
+      supplierId: supplierId || null,
     });
 
     res.status(201).json({
       success: true,
       message: 'Inventory transaction created successfully',
+      data: { transaction },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Update inventory transaction
+exports.updateInventoryTransaction = async (req, res) => {
+  try {
+    const { product, type, quantity, reason, supplierId } = req.body;
+    const { id } = req.params;
+
+    const transaction = await InventoryTransaction.update(parseInt(id), {
+      product,
+      type,
+      quantity,
+      reason,
+      supplierId: supplierId || null,
+    });
+
+    res.json({
+      success: true,
+      message: 'Inventory transaction updated successfully',
       data: { transaction },
     });
   } catch (error) {

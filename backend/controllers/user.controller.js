@@ -23,7 +23,8 @@ exports.getUsers = async (req, res) => {
           email: u.Email,
           fullName: u.Full_Name,
           phone: u.Phone,
-          role: u.Role,
+          avatar: u.Avatar,
+          role: u.Role?.toLowerCase() || u.Role, // Normalize role to lowercase
           isActive: u.IsActive,
         })),
         pagination: {
@@ -54,9 +55,15 @@ exports.getUserById = async (req, res) => {
       });
     }
 
+    // Normalize role to lowercase
+    const normalizedUser = {
+      ...user,
+      role: user.Role?.toLowerCase() || user.Role,
+    };
+
     res.json({
       success: true,
-      data: { user },
+      data: { user: normalizedUser },
     });
   } catch (error) {
     res.status(500).json({
@@ -71,10 +78,16 @@ exports.createUser = async (req, res) => {
   try {
     const user = await User.create(req.body);
 
+    // Normalize role to lowercase
+    const normalizedUser = {
+      ...user,
+      role: user.Role?.toLowerCase() || user.Role,
+    };
+
     res.status(201).json({
       success: true,
       message: 'User created successfully',
-      data: { user },
+      data: { user: normalizedUser },
     });
   } catch (error) {
     res.status(500).json({
@@ -96,10 +109,25 @@ exports.updateUser = async (req, res) => {
       });
     }
 
+    // User.findById already joins with Role table, so user.Role should already be set
+
+    // Normalize role to lowercase and format user data
+    const normalizedUser = {
+      id: user.User_ID,
+      _id: user.User_ID,
+      username: user.User_Name,
+      email: user.Email,
+      fullName: user.Full_Name,
+      phone: user.Phone,
+      avatar: user.Avatar,
+      role: user.Role?.toLowerCase() || user.Role,
+      isActive: user.IsActive,
+    };
+
     res.json({
       success: true,
       message: 'User updated successfully',
-      data: { user },
+      data: { user: normalizedUser },
     });
   } catch (error) {
     res.status(500).json({

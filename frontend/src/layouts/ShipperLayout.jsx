@@ -1,8 +1,14 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 const ShipperLayout = () => {
   const { logout, user } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -14,7 +20,7 @@ const ShipperLayout = () => {
             <NavLink to="/shipper/orders" className="hover:text-primary-600">Đơn hàng</NavLink>
             <span className="text-gray-600">Xin chào, {user?.fullName}</span>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
             >
               Đăng xuất

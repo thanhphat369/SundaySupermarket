@@ -46,7 +46,7 @@ exports.register = async (req, res) => {
           username: user.User_Name,
           email: user.Email,
           fullName: user.Full_Name,
-          role: user.Role,
+          role: user.Role?.toLowerCase() || user.Role, // Normalize role to lowercase
         },
         token,
       },
@@ -93,6 +93,21 @@ exports.login = async (req, res) => {
 
     const token = generateToken(user.User_ID);
 
+    // Safely parse address
+    let parsedAddress = null;
+    if (user.Address) {
+      if (typeof user.Address === 'string') {
+        try {
+          parsedAddress = JSON.parse(user.Address);
+        } catch (e) {
+          // If not valid JSON, treat as plain string
+          parsedAddress = user.Address;
+        }
+      } else {
+        parsedAddress = user.Address;
+      }
+    }
+
     res.json({
       success: true,
       message: 'Login successful',
@@ -102,8 +117,10 @@ exports.login = async (req, res) => {
           username: user.User_Name,
           email: user.Email,
           fullName: user.Full_Name,
-          role: user.Role,
+          phone: user.Phone,
+          address: parsedAddress,
           avatar: user.Avatar,
+          role: user.Role?.toLowerCase() || user.Role, // Normalize role to lowercase
         },
         token,
       },
@@ -128,9 +145,37 @@ exports.getMe = async (req, res) => {
       });
     }
 
+    // Safely parse address
+    let parsedAddress = null;
+    if (user.Address) {
+      if (typeof user.Address === 'string') {
+        try {
+          parsedAddress = JSON.parse(user.Address);
+        } catch (e) {
+          // If not valid JSON, treat as plain string
+          parsedAddress = user.Address;
+        }
+      } else {
+        parsedAddress = user.Address;
+      }
+    }
+
+    // Normalize role to lowercase and format user data
+    const normalizedUser = {
+      id: user.User_ID,
+      username: user.User_Name,
+      email: user.Email,
+      fullName: user.Full_Name,
+      phone: user.Phone,
+      address: parsedAddress,
+      avatar: user.Avatar,
+      role: user.Role?.toLowerCase() || user.Role,
+      isActive: user.IsActive,
+    };
+
     res.json({
       success: true,
-      data: { user },
+      data: { user: normalizedUser },
     });
   } catch (error) {
     res.status(500).json({
@@ -151,12 +196,23 @@ exports.updateProfile = async (req, res) => {
     if (phone !== undefined) updateData.phone = phone;
     if (address) updateData.address = JSON.stringify(address);
 
+    // Handle uploaded avatar
+    if (req.file) {
+      updateData.avatar = `/uploads/avatars/${req.file.filename}`;
+    }
+
     const user = await User.update(userId, updateData);
+
+    // Normalize role to lowercase
+    const normalizedUser = {
+      ...user,
+      role: user.Role?.toLowerCase() || user.Role,
+    };
 
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      data: { user },
+      data: { user: normalizedUser },
     });
   } catch (error) {
     res.status(500).json({

@@ -49,7 +49,10 @@ GO
 --5. Category
 CREATE TABLE Category (
     Category_ID INT IDENTITY(1,1) PRIMARY KEY,
-    Category_Name NVARCHAR(100) NOT NULL UNIQUE
+    Category_Name NVARCHAR(100) NOT NULL UNIQUE,
+    ParentCategoryID INT NULL,
+    ImageURL NVARCHAR(255),
+    FOREIGN KEY (ParentCategoryID) REFERENCES Category(Category_ID)
 );
 GO
 
@@ -190,3 +193,7 @@ VALUES
     ('Shipper'),
     ('Guest');
 GO
+
+
+
+

@@ -36,7 +36,8 @@ exports.getProducts = async (req, res) => {
           name: p.Name,
           description: p.Description,
           price: p.UnitPrice,
-          images: p.ImageURL ? [p.ImageURL] : [],
+          costPrice: p.CostPrice || null,
+          images: p.ImageURL ? p.ImageURL.split(',').map(img => img.trim()).filter(img => img) : [],
           category: {
             _id: p.CategoryID,
             name: p.Category_Name,
@@ -44,7 +45,13 @@ exports.getProducts = async (req, res) => {
           brand: {
             _id: p.Brand_ID,
             name: p.Brand_Name,
+            supplier: p.Supplier_Name ? {
+              name: p.Supplier_Name,
+            } : null,
           },
+          supplier: p.Supplier_Name ? {
+            name: p.Supplier_Name,
+          } : null,
           stock: p.Stock || 0,
           isActive: true,
         })),
@@ -84,7 +91,8 @@ exports.getProductById = async (req, res) => {
           name: product.Name,
           description: product.Description,
           price: product.UnitPrice,
-          images: product.ImageURL ? [product.ImageURL] : [],
+          costPrice: product.CostPrice || null,
+          images: product.ImageURL ? product.ImageURL.split(',').map(img => img.trim()).filter(img => img) : [],
           category: {
             _id: product.CategoryID,
             name: product.Category_Name,
@@ -92,7 +100,13 @@ exports.getProductById = async (req, res) => {
           brand: {
             _id: product.Brand_ID,
             name: product.Brand_Name,
+            supplier: product.Supplier_Name ? {
+              name: product.Supplier_Name,
+            } : null,
           },
+          supplier: product.Supplier_Name ? {
+            name: product.Supplier_Name,
+          } : null,
           stock: product.Stock || 0,
         },
       },
@@ -115,6 +129,24 @@ exports.createProduct = async (req, res) => {
       productData.images = req.files.map(file => 
         `/uploads/products/${file.filename}`
       );
+      
+      // Validate: require at least 2 images
+      if (productData.images.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vui lòng upload ít nhất 2 ảnh cho sản phẩm',
+        });
+      }
+      
+      // Limit to 5 images
+      if (productData.images.length > 5) {
+        productData.images = productData.images.slice(0, 5);
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng upload ít nhất 2 ảnh cho sản phẩm',
+      });
     }
 
     const product = await Product.create({
@@ -144,13 +176,38 @@ exports.createProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const productData = req.body;
+    let finalImages = [];
 
-    // Handle uploaded images
+    // Get existing images if provided (from formData)
+    if (req.body.existingImages) {
+      const existingImages = Array.isArray(req.body.existingImages) 
+        ? req.body.existingImages 
+        : [req.body.existingImages];
+      finalImages = existingImages.filter(img => img && img.trim() !== '');
+    }
+
+    // Handle uploaded new images
     if (req.files && req.files.length > 0) {
-      productData.images = req.files.map(file => 
+      const newImages = req.files.map(file => 
         `/uploads/products/${file.filename}`
       );
+      // Merge: existing images first, then new images
+      finalImages = [...finalImages, ...newImages].slice(0, 5); // Limit to 5 images
     }
+
+    // Only update images if we have final images or new files uploaded
+    if (finalImages.length > 0 || (req.files && req.files.length > 0)) {
+      // Validate: require at least 2 images when updating
+      if (finalImages.length > 0 && finalImages.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Sản phẩm phải có ít nhất 2 ảnh',
+        });
+      }
+      
+      productData.images = finalImages;
+    }
+    // If no images provided at all, don't update images field (keep existing)
 
     const product = await Product.update(req.params.id, productData);
 
@@ -161,10 +218,36 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    // Format response similar to getProductById
     res.json({
       success: true,
       message: 'Product updated successfully',
-      data: { product },
+      data: {
+        product: {
+          _id: product.Product_ID,
+          name: product.Name,
+          description: product.Description,
+          price: product.UnitPrice,
+          images: product.ImageURL ? product.ImageURL.split(',').map(img => img.trim()).filter(img => img) : [],
+          category: {
+            _id: product.CategoryID,
+            name: product.Category_Name,
+          },
+          brand: {
+            _id: product.Brand_ID,
+            name: product.Brand_Name,
+            supplier: product.Supplier_Name ? {
+              name: product.Supplier_Name,
+            } : null,
+          },
+          supplier: product.Supplier_Name ? {
+            name: product.Supplier_Name,
+          } : null,
+          stock: product.Stock || 0,
+          costPrice: product.CostPrice || null,
+          isActive: true,
+        },
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -208,6 +291,25 @@ exports.searchProducts = async (req, res) => {
     res.json({
       success: true,
       data: { products },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Cleanup unused images
+exports.cleanupUnusedImages = async (req, res) => {
+  try {
+    const cleanupUnusedImages = require('../scripts/cleanup-unused-images');
+    const result = await cleanupUnusedImages();
+    
+    res.json({
+      success: true,
+      message: `Cleanup completed. Deleted ${result.deleted} unused image files.`,
+      data: result,
     });
   } catch (error) {
     res.status(500).json({

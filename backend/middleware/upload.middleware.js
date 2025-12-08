@@ -12,10 +12,19 @@ if (!fs.existsSync(uploadDir)) {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let folder = 'general';
-    if (file.fieldname === 'product') folder = 'products';
-    if (file.fieldname === 'category') folder = 'categories';
-    if (file.fieldname === 'brand') folder = 'brands';
-    if (file.fieldname === 'avatar') folder = 'avatars';
+    // Hỗ trợ cả 'product' và 'images' cho products
+    // Kiểm tra route path hoặc fieldname
+    if (file.fieldname === 'product' || 
+        file.fieldname === 'images' || 
+        (req.originalUrl && req.originalUrl.includes('/products'))) {
+      folder = 'products';
+    } else if (file.fieldname === 'category') {
+      folder = 'categories';
+    } else if (file.fieldname === 'brand') {
+      folder = 'brands';
+    } else if (file.fieldname === 'avatar') {
+      folder = 'avatars';
+    }
 
     const dir = path.join(uploadDir, folder);
     if (!fs.existsSync(dir)) {

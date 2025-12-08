@@ -17,6 +17,9 @@ const orderRoutes = require('./routes/order.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
 const reviewRoutes = require('./routes/review.routes');
 const deliveryRoutes = require('./routes/delivery.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
+const supplierRoutes = require('./routes/supplier.routes');
+const purchaseOrderRoutes = require('./routes/purchaseorder.routes');
 
 const app = express();
 
@@ -41,6 +44,9 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -61,6 +67,50 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
+
+// Scheduled tasks - Auto cleanup unused images daily
+const cleanupUnusedImages = require('./scripts/cleanup-unused-images');
+
+// Run cleanup once on startup (optional)
+// cleanupUnusedImages().catch(err => console.error('Initial cleanup error:', err));
+
+// Schedule daily cleanup at 2 AM
+const scheduleDailyCleanup = () => {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(2, 0, 0, 0); // 2 AM
+  
+  const msUntilCleanup = tomorrow.getTime() - now.getTime();
+  
+  setTimeout(() => {
+    console.log('🧹 Running scheduled image cleanup...');
+    cleanupUnusedImages()
+      .then(result => {
+        console.log(`✅ Scheduled cleanup completed: Deleted ${result.deleted} files`);
+      })
+      .catch(err => {
+        console.error('❌ Scheduled cleanup error:', err);
+      });
+    
+    // Schedule next cleanup (24 hours later)
+    setInterval(() => {
+      console.log('🧹 Running scheduled image cleanup...');
+      cleanupUnusedImages()
+        .then(result => {
+          console.log(`✅ Scheduled cleanup completed: Deleted ${result.deleted} files`);
+        })
+        .catch(err => {
+          console.error('❌ Scheduled cleanup error:', err);
+        });
+    }, 24 * 60 * 60 * 1000); // 24 hours
+  }, msUntilCleanup);
+  
+  console.log(`📅 Scheduled daily image cleanup at 2 AM (in ${Math.round(msUntilCleanup / (1000 * 60 * 60))} hours)`);
+};
+
+// Start scheduled cleanup
+scheduleDailyCleanup();
 
 const PORT = process.env.PORT || 5000;
 

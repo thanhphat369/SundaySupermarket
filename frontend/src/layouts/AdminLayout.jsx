@@ -1,8 +1,14 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 const AdminLayout = () => {
   const { logout, user } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const navItems = [
     { path: '/admin', label: 'Dashboard', icon: '📊' },
@@ -11,6 +17,9 @@ const AdminLayout = () => {
     { path: '/admin/brands', label: 'Nhãn hàng', icon: '🏷️' },
     { path: '/admin/orders', label: 'Đơn hàng', icon: '🛒' },
     { path: '/admin/inventory', label: 'Kho hàng', icon: '📋' },
+    { path: '/admin/stock-transactions', label: 'Giao dịch kho', icon: '📊' },
+    { path: '/admin/suppliers', label: 'Nhà cung cấp', icon: '🏢' },
+    { path: '/admin/purchase-orders', label: 'Đơn đặt hàng', icon: '📝' },
     { path: '/admin/users', label: 'Người dùng', icon: '👥' },
   ];
 
@@ -48,7 +57,7 @@ const AdminLayout = () => {
           <div className="flex items-center gap-4">
             <span className="text-gray-600">Xin chào, {user?.fullName}</span>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
             >
               Đăng xuất
