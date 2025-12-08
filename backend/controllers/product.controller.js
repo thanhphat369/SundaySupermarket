@@ -45,6 +45,7 @@ exports.getProducts = async (req, res) => {
           brand: {
             _id: p.Brand_ID,
             name: p.Brand_Name,
+            description: p.Brand_Description || null,
             supplier: p.Supplier_Name ? {
               name: p.Supplier_Name,
             } : null,
@@ -100,6 +101,7 @@ exports.getProductById = async (req, res) => {
           brand: {
             _id: product.Brand_ID,
             name: product.Brand_Name,
+            description: product.Brand_Description || null,
             supplier: product.Supplier_Name ? {
               name: product.Supplier_Name,
             } : null,
@@ -236,6 +238,7 @@ exports.updateProduct = async (req, res) => {
           brand: {
             _id: product.Brand_ID,
             name: product.Brand_Name,
+            description: product.Brand_Description || null,
             supplier: product.Supplier_Name ? {
               name: product.Supplier_Name,
             } : null,

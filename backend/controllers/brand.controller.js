@@ -11,6 +11,7 @@ exports.getBrands = async (req, res) => {
         brands: brands.map(b => ({
           _id: b.Brand_ID,
           name: b.Brand_Name,
+          description: b.Description || null,
           supplierId: b.Supplier_ID || null,
           supplier: b.Supplier_Name ? {
             _id: b.Supplier_ID,
@@ -47,6 +48,7 @@ exports.getBrandById = async (req, res) => {
         brand: {
           _id: brand.Brand_ID,
           name: brand.Brand_Name,
+          description: brand.Description || null,
           supplierId: brand.Supplier_ID || null,
           supplier: brand.Supplier_Name ? {
             _id: brand.Supplier_ID,

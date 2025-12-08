@@ -22,15 +22,6 @@ const AdminInventory = () => {
     }
   };
 
-  const handleUpdateStock = async (productId, newStock) => {
-    try {
-      await api.put(`/products/${productId}`, { stock: parseInt(newStock) });
-      toast.success('Cập nhật tồn kho thành công');
-      fetchProducts();
-    } catch (error) {
-      toast.error('Lỗi khi cập nhật tồn kho');
-    }
-  };
 
   if (loading) return <div className="p-6">Đang tải...</div>;
 
@@ -89,20 +80,14 @@ const AdminInventory = () => {
                 <td className="px-6 py-4 text-sm">{product.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      defaultValue={product.stock || 0}
-                      onBlur={(e) => {
-                        if (e.target.value !== (product.stock || 0).toString()) {
-                          handleUpdateStock(product._id, e.target.value);
-                        }
-                      }}
-                      className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <span className="font-medium">{product.stock || 0}</span>
                     {product.stock < 10 && (
-                      <span className="text-red-600 text-xs">⚠️</span>
+                      <span className="text-red-600 text-xs" title="Sản phẩm sắp hết hàng">⚠️</span>
                     )}
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chỉ xem - Sửa qua giao dịch kho
+                  </p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <Link

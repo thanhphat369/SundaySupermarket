@@ -25,8 +25,6 @@ const AdminProducts = () => {
     supplier: '',
     brand: '',
     price: '',
-    stock: '',
-    minStock: '',
   });
 
   useEffect(() => {
@@ -179,8 +177,7 @@ const AdminProducts = () => {
       productData.append('brand', parseInt(formData.brand));
       // Note: supplier is linked through brand, not directly to product
       productData.append('price', parseInt(formData.price));
-      productData.append('stock', formData.stock ? parseInt(formData.stock) : 0);
-      productData.append('minStock', formData.minStock ? parseInt(formData.minStock) : 0);
+      // Stock không được set từ form, chỉ quản lý qua giao dịch kho
 
       // Append new images
       selectedImages.forEach((file) => {
@@ -233,7 +230,7 @@ const AdminProducts = () => {
 
       setShowModal(false);
       setEditingProduct(null);
-      setFormData({ name: '', description: '', category: '', supplier: '', brand: '', price: '', stock: '', minStock: '' });
+      setFormData({ name: '', description: '', category: '', supplier: '', brand: '', price: '' });
       setSelectedImages([]);
       setImagePreviews([]);
       if (fileInputRef.current) {
@@ -261,8 +258,6 @@ const AdminProducts = () => {
       brand: product.brand._id.toString(),
       price: product.price.toString(),
       costPrice: product.costPrice || null,
-      stock: product.stock?.toString() || '0',
-      minStock: '0',
     });
     
     // Set image previews từ product hiện tại
@@ -337,7 +332,7 @@ const AdminProducts = () => {
         <button
           onClick={() => {
             setEditingProduct(null);
-            setFormData({ name: '', description: '', category: '', supplier: '', brand: '', price: '', stock: '', minStock: '' });
+            setFormData({ name: '', description: '', category: '', supplier: '', brand: '', price: '' });
             setSelectedImages([]);
             setImagePreviews([]);
             if (fileInputRef.current) {
@@ -598,8 +593,8 @@ const AdminProducts = () => {
                   </div>
                 )}
 
-                {/* Row 4: 4 columns - Giá nhập, Giá bán, Tồn kho, Min Stock */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Row 4: 2 columns - Giá nhập, Giá bán */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Giá nhập (VNĐ)
@@ -629,33 +624,25 @@ const AdminProducts = () => {
                       placeholder="0"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tồn kho
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tồn kho tối thiểu
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.minStock}
-                      onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      placeholder="0"
-                    />
-                  </div>
                 </div>
+
+                {/* Row 4.5: Tồn kho (chỉ xem) */}
+                {editingProduct && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Tồn kho hiện tại
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${editingProduct.stock || 0} sản phẩm`}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tồn kho chỉ có thể thay đổi qua giao dịch kho (Nhập/Xuất/Điều chỉnh)
+                    </p>
+                  </div>
+                )}
 
                 {/* Row 5: Hình ảnh */}
                 <div>

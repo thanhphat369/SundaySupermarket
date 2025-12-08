@@ -34,10 +34,27 @@ const ProductDetailPage = () => {
         </div>
         <div>
           <h1 className="text-3xl font-bold mb-4">{data.name}</h1>
+          {data.brand && (
+            <div className="mb-3">
+              <span className="text-sm text-gray-500">Nhãn hàng: </span>
+              <span className="text-sm font-semibold text-gray-700">{data.brand.name}</span>
+            </div>
+          )}
           <p className="text-2xl text-primary-600 font-bold mb-4">
             {new Intl.NumberFormat('vi-VN').format(data.price)} đ
           </p>
-          <p className="text-gray-600 mb-4">{data.description}</p>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold mb-2">Mô tả sản phẩm</h2>
+            <p className="text-gray-600 whitespace-pre-line">{data.description || 'Chưa có mô tả'}</p>
+          </div>
+          {data.brand?.description && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+              <h2 className="text-lg font-semibold mb-2 text-gray-800">Về nhãn hàng {data.brand.name}</h2>
+              <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed">
+                {data.brand.description}
+              </p>
+            </div>
+          )}
           <div className="mb-4">
             <span className="font-semibold">Tồn kho: </span>
             <span>{data.stock}</span>

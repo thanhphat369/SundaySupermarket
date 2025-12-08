@@ -49,6 +49,12 @@ class Brand {
     let query = `INSERT INTO Brand (Brand_Name`;
     let values = `VALUES (@name`;
     
+    if (brandData.description !== undefined && brandData.description !== null && brandData.description !== '') {
+      query += `, Description`;
+      values += `, @description`;
+      request.input('description', sql.NVarChar, brandData.description);
+    }
+    
     if (brandData.supplierId !== undefined && brandData.supplierId !== null && brandData.supplierId !== '') {
       query += `, Supplier_ID`;
       values += `, @supplierId`;
@@ -68,6 +74,15 @@ class Brand {
       .input('name', sql.NVarChar, brandData.name);
     
     let updates = ['Brand_Name = @name'];
+    
+    if (brandData.description !== undefined) {
+      if (brandData.description === null || brandData.description === '') {
+        updates.push('Description = NULL');
+      } else {
+        updates.push('Description = @description');
+        request.input('description', sql.NVarChar, brandData.description);
+      }
+    }
     
     if (brandData.supplierId !== undefined) {
       if (brandData.supplierId === null || brandData.supplierId === '') {
