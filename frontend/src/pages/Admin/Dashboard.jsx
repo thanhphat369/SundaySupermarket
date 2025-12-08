@@ -5,14 +5,20 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Get current month and year as default
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(String(currentDate.getMonth() + 1).padStart(2, '0'));
+  const [selectedYear, setSelectedYear] = useState(String(currentDate.getFullYear()));
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/dashboard/stats');
+      setLoading(true);
+      const response = await api.get(`/dashboard/stats?month=${selectedMonth}&year=${selectedYear}`);
       setStats(response.data.data.stats);
       setRecentOrders(response.data.data.recentOrders || []);
     } catch (error) {
@@ -21,6 +27,20 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  // Generate month options
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const month = String(i + 1).padStart(2, '0');
+    const monthName = new Date(2000, i, 1).toLocaleString('vi-VN', { month: 'long' });
+    return { value: month, label: monthName };
+  });
+
+  // Generate year options (last 5 years + current year)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 6 }, (_, i) => {
+    const year = currentYear - i;
+    return { value: String(year), label: String(year) };
+  });
 
   if (loading) {
     return <div className="p-6">Đang tải...</div>;
@@ -37,7 +57,39 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <div className="flex gap-4 items-center">
+          <div className="flex gap-2 items-center">
+            <label className="text-sm font-medium text-gray-700">Tháng:</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              {monthOptions.map((month) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-sm font-medium text-gray-700">Năm:</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              {yearOptions.map((year) => (
+                <option key={year.value} value={year.value}>
+                  {year.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

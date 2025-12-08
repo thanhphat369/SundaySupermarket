@@ -28,11 +28,12 @@ class Product {
         s.Supplier_Name,
         i.Stock,
         i.MinStock,
-        (SELECT TOP 1 pod.UnitCost 
-         FROM PurchaseOrder_Details pod
-         INNER JOIN PurchaseOrder po ON pod.PO_ID = po.PO_ID
-         WHERE pod.Product_ID = p.Product_ID
-         ORDER BY po.CreatedAt DESC) as CostPrice
+        (SELECT TOP 1 st.UnitCost 
+         FROM Stock_Transactions st
+         WHERE st.Product_ID = p.Product_ID 
+           AND st.Type = 'import'
+           AND st.UnitCost IS NOT NULL
+         ORDER BY st.CreatedAt DESC) as CostPrice
       FROM Product p
       INNER JOIN Category c ON p.CategoryID = c.Category_ID
       INNER JOIN Brand b ON p.Brand_ID = b.Brand_ID
@@ -105,11 +106,12 @@ class Product {
           s.Supplier_Name,
           i.Stock,
           i.MinStock,
-          (SELECT TOP 1 pod.UnitCost 
-           FROM PurchaseOrder_Details pod
-           INNER JOIN PurchaseOrder po ON pod.PO_ID = po.PO_ID
-           WHERE pod.Product_ID = p.Product_ID
-           ORDER BY po.CreatedAt DESC) as CostPrice
+          (SELECT TOP 1 st.UnitCost
+           FROM Stock_Transactions st
+           WHERE st.Product_ID = p.Product_ID 
+             AND st.Type = 'import'
+             AND st.UnitCost IS NOT NULL
+           ORDER BY st.CreatedAt DESC) as CostPrice
         FROM Product p
         INNER JOIN Category c ON p.CategoryID = c.Category_ID
         INNER JOIN Brand b ON p.Brand_ID = b.Brand_ID

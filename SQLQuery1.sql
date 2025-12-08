@@ -1,4 +1,4 @@
-﻿
+
 CREATE DATABASE SundaySupermarket;
 GO
 USE SundaySupermarket;
@@ -113,6 +113,7 @@ CREATE TABLE Stock_Transactions (
     Product_ID INT NOT NULL,
     Type NVARCHAR(20) NOT NULL,
     Quantity INT NOT NULL,
+    UnitCost INT NULL,
     Supplier_ID INT NULL,
     CreatedAt DATETIME DEFAULT GETDATE(),
     Note NVARCHAR(255),
